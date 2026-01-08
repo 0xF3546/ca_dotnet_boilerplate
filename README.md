@@ -9,6 +9,7 @@ A production-ready .NET 8 boilerplate implementing Clean Architecture principles
 - [Clean Architecture Explained](#clean-architecture-explained)
 - [Architecture Diagram](#architecture-diagram)
 - [Project Structure](#project-structure)
+- [Tests](#tests)
 - [How Components Work Together](#how-components-work-together)
 - [Request Flow](#request-flow)
 - [Key Concepts](#key-concepts)
@@ -194,23 +195,86 @@ cs_dotnet_boilerplate/
 │   │       ├── Role.cs                 # Role constants
 │   │       └── RoleDto.cs              # Role DTO
 │   │
-│   └── backend.DataAccess/             # 💾 Infrastructure Layer
-│       ├── Accounts/
-│       │   ├── *Repository.cs          # Repositories (e.g. AccountRepository)
-│       │   ├── AppUser.cs              # Database entity for users
-│       │   └── AppRole.cs              # Database entity for roles
-│       ├── Database/
-│       │   ├── AppDbContext.cs         # EF Core database context
-│       │   └── AppDbContextFactory.cs  # Factory for migrations
-│       ├── Configuration.cs            # Infrastructure DI registration
-│       └── DatabaseConfiguration.cs    # Database setup
+│   ├── backend.DataAccess/             # 💾 Infrastructure Layer
+│   │   ├── Accounts/
+│   │   │   ├── *Repository.cs          # Repositories (e.g. AccountRepository)
+│   │   │   ├── AppUser.cs              # Database entity for users
+│   │   │   └── AppRole.cs              # Database entity for roles
+│   │   ├── Database/
+│   │   │   ├── AppDbContext.cs         # EF Core database context
+│   │   │   └── AppDbContextFactory.cs  # Factory for migrations
+│   │   ├── Configuration.cs            # Infrastructure DI registration
+│   │   └── DatabaseConfiguration.cs    # Database setup
+│   │
+│   └── backend.Tests/                  # 🧪 Test Layer
+│       ├── Core/                       # Tests for backend.Core
+│       │   ├── Emails/
+│       │   │   └── EmailServiceTests.cs    # Email service tests
+│       │   └── Extensions/
+│       │       ├── PageRequestTests.cs     # Pagination request tests
+│       │       ├── PageResultTests.cs      # Pagination result tests
+│       │       └── QueryableExtensionsTests.cs  # LINQ extension tests
+│       ├── DataAccess/                 # Tests for backend.DataAccess
+│       │   ├── Accounts/
+│       │   │   └── AuthRepositoryTests.cs  # Authentication repository tests
+│       │   ├── Database/
+│       │   │   └── AppDbContextTests.cs    # DbContext tests
+│       │   ├── ConfigurationTests.cs       # Infrastructure config tests
+│       │   └── DatabaseConfigurationTests.cs  # Database setup tests
+│       └── backend.Tests.csproj        # Test project file
 │
 ├── backend.sln                         # Solution file
 ├── Dockerfile                          # Docker configuration
 └── README.md                           # This file
 ```
 
-> **Note:** A `backend.Tests` project for unit and integration tests can be added following the same Clean Architecture principles. Tests would typically mirror the structure of the projects they test and use mocking frameworks to test each layer independently.
+## Tests
+
+The `backend.Tests` project contains unit and integration tests following Clean Architecture principles. Tests mirror the structure of the projects they test, ensuring comprehensive coverage across all layers.
+
+### Test Structure
+
+The test project is organized by layer:
+- **Core Tests**: Test business logic, DTOs, and service implementations in `backend.Core`
+- **DataAccess Tests**: Test repositories, database context, and data access logic in `backend.DataAccess`
+
+### Testing Technologies
+
+- **NUnit**: Testing framework for writing and running tests
+- **Moq**: Mocking framework for creating test doubles
+- **Entity Framework InMemory**: In-memory database provider for testing data access without a real database
+- **Coverlet**: Code coverage tool
+
+### Running Tests
+
+Run all tests from the solution root:
+```bash
+dotnet test
+```
+
+Run tests with code coverage:
+```bash
+dotnet test /p:CollectCoverage=true
+```
+
+### Test Examples
+
+**Unit Test Example** (`PageRequestTests.cs`):
+Tests simple domain models and logic without external dependencies.
+
+**Integration Test Example** (`AuthRepositoryTests.cs`):
+Tests data access repositories using mocked dependencies (UserManager, SignInManager) to validate business rules and error handling.
+
+**Service Test Example** (`EmailServiceTests.cs`):
+Tests service implementations using mocked configuration to ensure proper instantiation and behavior.
+
+### Test Best Practices
+
+- **Arrange-Act-Assert**: Tests follow the AAA pattern for clarity
+- **Independent Tests**: Each test is self-contained and doesn't depend on other tests
+- **Descriptive Names**: Test names clearly describe what is being tested and the expected outcome
+- **Mock External Dependencies**: External services and frameworks are mocked to isolate the code under test
+- **Mirror Project Structure**: Test namespaces and folders match the structure of the code being tested
 
 ## How Components Work Together
 
