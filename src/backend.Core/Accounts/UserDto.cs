@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace backend.Core.Accounts
+﻿namespace backend.Core.Accounts
 {
     public class UserDto
     {
+        public required string Id { get; set; }
+        public required string Email { get; set; }
+        public string? UserName { get; set; }
     }
 }

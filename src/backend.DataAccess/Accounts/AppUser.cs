@@ -1,10 +1,5 @@
 ﻿using backend.Core.Accounts;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace backend.DataAccess.Accounts
 {
@@ -12,7 +7,12 @@ namespace backend.DataAccess.Accounts
     {
         public UserDto GetDto()
         {
-            return new();
+            return new UserDto
+            {
+                Id = Id,
+                Email = Email ?? string.Empty,
+                UserName = UserName
+            };
         }
     }
 }

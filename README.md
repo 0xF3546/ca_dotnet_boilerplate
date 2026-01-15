@@ -25,6 +25,8 @@ This boilerplate provides a solid foundation for building scalable, maintainable
 - ✅ RESTful API with ASP.NET Core 8
 - ✅ Entity Framework Core with PostgreSQL
 - ✅ ASP.NET Identity for authentication
+- ✅ OAuth2 Authentication (Google Login)
+- ✅ Hybrid Authentication (Email/Password + OAuth2)
 - ✅ Repository pattern for data access
 - ✅ Dependency Injection throughout
 - ✅ Swagger/OpenAPI documentation
@@ -181,7 +183,8 @@ cs_dotnet_boilerplate/
 │   │   │   ├── I*Crud.cs               # Interfaces (e.g. IAccountCrud)
 │   │   │   └── *Dto.cs                 # DTOs (e.g. UserDto, CreateUserDto)
 │   │   ├── Auth/
-│   │   │   └── *Dto.cs                 # DTOs (e.g. LoginDto, RegisterDto)
+│   │   │   ├── *Dto.cs                 # DTOs (e.g. LoginDto, RegisterDto, ExternalAuthDto)
+│   │   │   └── IExternalAuthService.cs # OAuth2 service interface
 │   │   ├── Emails/
 │   │   │   ├── IEmailService.cs        # Service interfaces
 │   │   │   ├── EmailService.cs         # Service implementations
@@ -200,6 +203,8 @@ cs_dotnet_boilerplate/
 │   │   │   ├── *Repository.cs          # Repositories (e.g. AccountRepository)
 │   │   │   ├── AppUser.cs              # Database entity for users
 │   │   │   └── AppRole.cs              # Database entity for roles
+│   │   ├── Auth/
+│   │   │   └── ExternalAuthService.cs  # OAuth2 service implementation
 │   │   ├── Database/
 │   │   │   ├── AppDbContext.cs         # EF Core database context
 │   │   │   └── AppDbContextFactory.cs  # Factory for migrations
@@ -360,7 +365,7 @@ public AccountController(IAccountCrud accountCrud)
 
 Here's how a typical request flows through the application:
 
-### Example: Creating a New User
+### Example 1: Creating a New User (Classic Registration)
 
 ```
 1. HTTP Request
@@ -401,6 +406,62 @@ Here's how a typical request flows through the application:
    
    200 OK
    Body: { "id": "guid", "email": "user@example.com", "userName": "newuser" }
+```
+
+### Example 2: Google OAuth2 Login Flow
+
+```
+1. Client initiates Google Login
+   ↓
+   GET /auth/google-login
+   
+2. Presentation Layer (backend.Api)
+   ↓
+   AuthController.GoogleLogin()
+   • Creates OAuth2 challenge
+   • Redirects to Google authorization page
+   
+3. User authorizes on Google
+   ↓
+   Google OAuth2 Page
+   • User logs in with Google account
+   • User grants permissions
+   • Google redirects back with authorization code
+   
+4. Google Callback
+   ↓
+   GET /auth/google-callback?code=...
+   
+5. Presentation Layer (backend.Api)
+   ↓
+   AuthController.GoogleCallback()
+   • Receives authorization code from Google
+   • Extracts user info (email, name, etc.)
+   • Creates ExternalAuthDto
+   
+6. Application Layer (backend.Core)
+   ↓
+   IExternalAuthService.HandleExternalLoginAsync()
+   
+7. Infrastructure Layer (backend.DataAccess)
+   ↓
+   ExternalAuthService.HandleExternalLoginAsync()
+   • Checks if user exists by email
+   • If exists: Links Google account to existing user
+   • If new: Creates new user with Google login info
+   • Signs in the user
+   • Returns UserDto
+   
+8. Database
+   ↓
+   PostgreSQL Database
+   • User record created/updated
+   • External login info stored (AspNetUserLogins table)
+   
+9. Response
+   ↓
+   200 OK
+   Body: { "id": "guid", "email": "user@gmail.com", "userName": "user@gmail.com" }
 ```
 
 ### Visual Flow Diagram
@@ -505,6 +566,7 @@ Because of interfaces and DI, you can easily:
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
 - [PostgreSQL](https://www.postgresql.org/download/) 12 or later
 - IDE: [Visual Studio 2022](https://visualstudio.microsoft.com/), [VS Code](https://code.visualstudio.com/), or [Rider](https://www.jetbrains.com/rider/)
+- **Google OAuth2 Credentials** (for Google Login - optional)
 
 ### Setup
 
@@ -525,25 +587,90 @@ Because of interfaces and DI, you can easily:
    }
    ```
 
-3. **Restore dependencies**
+3. **Configure Google OAuth2 (Optional)**
+   
+   To enable Google Login, you need to:
+   
+   a. **Create Google OAuth2 Credentials:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Enable the "Google+ API"
+   - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
+   - Choose "Web application"
+   - Add authorized redirect URIs:
+     - `https://localhost:5001/auth/google-callback`
+     - `https://yourdomain.com/auth/google-callback` (production)
+   - Copy the Client ID and Client Secret
+   
+   b. **Update appsettings.json:**
+   ```json
+   {
+     "Authentication": {
+       "Google": {
+         "ClientId": "your-google-client-id.apps.googleusercontent.com",
+         "ClientSecret": "your-google-client-secret"
+       }
+     }
+   }
+   ```
+
+4. **Restore dependencies**
    ```bash
    dotnet restore
    ```
 
-4. **Apply database migrations**
+5. **Apply database migrations**
    ```bash
    cd src/backend.Api
    dotnet ef database update --project ../backend.DataAccess
    ```
 
-5. **Run the application**
+6. **Run the application**
    ```bash
    dotnet run
    ```
 
-6. **Access the API**
+7. **Access the API**
    - API: `https://localhost:5001`
    - Swagger UI: `https://localhost:5001/swagger`
+
+### Authentication Endpoints
+
+The API supports two authentication methods:
+
+#### Classic Email/Password Authentication
+
+- **POST** `/auth/register` - Register with email and password
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "SecurePassword123!"
+  }
+  ```
+
+- **POST** `/auth/login` - Login with email and password
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "SecurePassword123!"
+  }
+  ```
+
+#### Google OAuth2 Authentication
+
+- **GET** `/auth/google-login` - Initiates Google OAuth2 login flow
+  - Redirects user to Google login page
+  - After successful login, redirects to `/auth/google-callback`
+  
+- **GET** `/auth/google-callback` - Callback endpoint for Google OAuth2
+  - Automatically called by Google after user authorization
+  - Creates or updates user account
+  - Returns user information
+
+#### Common Endpoints
+
+- **POST** `/auth/logout` - Logout (requires authentication)
+- **GET** `/auth/me` - Get current user info (requires authentication)
 
 ### Docker Setup (Alternative)
 
@@ -560,10 +687,15 @@ Because of interfaces and DI, you can easily:
 - **C# 12**: Modern C# language features
 - **ASP.NET Core**: Web API framework
 
+### Authentication & Security
+- **ASP.NET Identity**: User and role management
+- **OAuth2**: External authentication protocol
+- **Google Authentication**: Google OAuth2 provider integration
+- **Cookie-based Authentication**: Secure session management
+
 ### Data Access
 - **Entity Framework Core 9**: ORM for database access
 - **PostgreSQL**: Relational database
-- **ASP.NET Identity**: Authentication and user management
 
 ### API & Documentation
 - **NSwag**: OpenAPI/Swagger documentation
