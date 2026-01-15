@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using backend.DataAccess;
 using System.Text.Json.Serialization;
 
@@ -8,7 +10,6 @@ namespace backend.Api.Configuration
     public class Startup(IConfiguration configuration)
     {
         private readonly IConfiguration _configuration = configuration;
-        private readonly Logger<Startup> _logger;
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -37,6 +38,12 @@ namespace backend.Api.Configuration
 
             services.ConfigureApplicationCookie(options =>
             {
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Cookie.SameSite = SameSiteMode.Lax;
+                options.ExpireTimeSpan = TimeSpan.FromDays(7);
+                options.SlidingExpiration = true;
+
                 options.Events.OnRedirectToLogin = context =>
                 {
                     context.Response.StatusCode = 401;
@@ -49,12 +56,29 @@ namespace backend.Api.Configuration
                 };
             });
 
+            services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = IdentityConstants.ApplicationScheme;
+                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+            })
+            .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+            {
+                var googleConfig = _configuration.GetSection("Authentication:Google");
+                options.ClientId = googleConfig["ClientId"] ?? throw new InvalidOperationException("Google ClientId is not configured");
+                options.ClientSecret = googleConfig["ClientSecret"] ?? throw new InvalidOperationException("Google ClientSecret is not configured");
+                
+                options.Scope.Add("email");
+                options.Scope.Add("profile");
+                
+                options.SaveTokens = true;
+            });
 
             services.AddCors(c =>
             {
-                c.AddDefaultPolicy(new CorsPolicyBuilder().WithOrigins(_configuration.GetSection("CorsUrls").Get<string[]>())
+                c.AddDefaultPolicy(new CorsPolicyBuilder()
+                    .WithOrigins(_configuration.GetSection("CorsUrls").Get<string[]>() ?? Array.Empty<string>())
                     .AllowAnyMethod()
-                .AllowAnyHeader()
+                    .AllowAnyHeader()
                     .AllowCredentials()
                     .Build());
             });
@@ -64,24 +88,6 @@ namespace backend.Api.Configuration
             services.ConfigureDatabase(_configuration);
 
             services.AddAuthorization();
-            services.ConfigureApplicationCookie(options =>
-            {
-                options.Cookie.HttpOnly = true;
-                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                options.Cookie.SameSite = SameSiteMode.Strict;
-
-                options.Events.OnRedirectToLogin = context =>
-                {
-                    context.Response.StatusCode = 401;
-                    return Task.CompletedTask;
-                };
-                options.Events.OnRedirectToAccessDenied = context =>
-                {
-                    context.Response.StatusCode = 403;
-                    return Task.CompletedTask;
-                };
-            });
-
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -98,6 +104,7 @@ namespace backend.Api.Configuration
 
             app.UseAuthentication();
             app.UseAuthorization();
+            
             app.UseEndpoints(endpoints => endpoints.MapControllers());
         }
     }
