@@ -8,7 +8,6 @@ namespace backend.Tests.DataAccess.Accounts
     [TestFixture]
     public class AuthRepositoryTests
     {
-        private Mock<SignInManager<AppUser>> _mockSignInManager;
         private Mock<UserManager<AppUser>> _mockUserManager;
         private AuthRepository _authRepository;
 
@@ -19,15 +18,7 @@ namespace backend.Tests.DataAccess.Accounts
             _mockUserManager = new Mock<UserManager<AppUser>>(
                 userStoreMock.Object, null, null, null, null, null, null, null, null);
 
-            var contextAccessor = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
-            var claimsFactory = new Mock<IUserClaimsPrincipalFactory<AppUser>>();
-            _mockSignInManager = new Mock<SignInManager<AppUser>>(
-                _mockUserManager.Object,
-                contextAccessor.Object,
-                claimsFactory.Object,
-                null, null, null, null);
-
-            _authRepository = new AuthRepository(_mockSignInManager.Object, _mockUserManager.Object);
+            _authRepository = new AuthRepository(_mockUserManager.Object);
         }
 
         [Test]
