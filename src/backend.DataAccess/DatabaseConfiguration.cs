@@ -1,4 +1,6 @@
-﻿using backend.DataAccess.Database;
+﻿using backend.DataAccess.Accounts;
+using backend.DataAccess.Database;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +21,10 @@ namespace backend.DataAccess
             {
                 options.UseNpgsql(appDbContext);
             });
+
+            services.AddIdentity<AppUser, AppRole>()
+                .AddEntityFrameworkStores<AppDbContext>()
+                .AddDefaultTokenProviders();
         }
     }
 }
