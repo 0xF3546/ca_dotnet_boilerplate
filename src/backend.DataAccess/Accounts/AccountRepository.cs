@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace backend.DataAccess.Accounts
 {
-    public class AuthRepository(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager) : IAccountCrud
+    public class AuthRepository(UserManager<AppUser> userManager) : IAccountCrud
     {
         /// <inheritdoc />
         public async Task<UserDto> CreateAsync(CreateUserDto createUserDto)

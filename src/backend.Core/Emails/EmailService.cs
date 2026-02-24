@@ -14,7 +14,7 @@ namespace backend.Core.Emails
         {
             MailMessage mailMessage = new MailMessage
             {
-                From = new MailAddress(configuration["Email:FromAddress"], configuration["Email:FromName"]),
+                From = new MailAddress(configuration["Email:FromAddress"] ?? throw new InvalidOperationException("Email:FromAddress is not configured"), configuration["Email:FromName"]),
                 Subject = subject,
                 Body = body,
                 IsBodyHtml = true
@@ -51,9 +51,9 @@ namespace backend.Core.Emails
             {
                 var smtpClient = new SmtpClient(configuration["Email:SmtpServer"])
                 {
-                    Port = int.Parse(configuration["Email:SmtpPort"]),
+                    Port = int.Parse(configuration["Email:SmtpPort"] ?? throw new InvalidOperationException("Email:SmtpPort is not configured")),
                     Credentials = new System.Net.NetworkCredential(configuration["Email:Username"], configuration["Email:Password"]),
-                    EnableSsl = bool.Parse(configuration["Email:EnableSsl"])
+                    EnableSsl = bool.Parse(configuration["Email:EnableSsl"] ?? throw new InvalidOperationException("Email:EnableSsl is not configured"))
                 };
                 return smtpClient;
             }
